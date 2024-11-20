@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Project Management Form</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Project Management Form</h2>
+            <form id="projectForm">
+                <div class="form-group">
+                    <label for="projectID">Project ID:</label>
+                    <input type="text" class="form-control" id="projectID" placeholder="Enter Project ID" name="projectID" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectName">Project Name:</label>
+                    <input type="text" class="form-control" id="projectName" placeholder="Enter Project Name" name="projectName" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="assignedTo">Assigned To:</label>
+                    <input type="text" class="form-control" id="assignedTo" placeholder="Enter Assigned To" name="assignedTo" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="assignmentDate">Assignment Date:</label>
+                    <input type="date" class="form-control" id="assignmentDate" name="assignmentDate" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="deadline">Deadline:</label>
+                    <input type="date" class="form-control" id="deadline" name="deadline" disabled>
+                </div>
+                <button type="button" class="btn btn-success" id="saveBtn" onclick="saveData()" disabled>Save</button>
+                <button type="button" class="btn btn-primary" id="updateBtn" onclick="updateData()" disabled>Update</button>
+                <button type="button" class="btn btn-warning" id="resetBtn" onclick="resetForm()">Reset</button>
+            </form>
+        </div>
+
+        <script>
+            const connToken = "90936861|-31948784479254024|90932362"; // Your connection token
+            const dbName = "COLLEGE-DB"; // Database name
+            const relName = "PROJECT-TABLE"; // Table name
+            const dbBaseUrl = "http://api.login2explore.com:5577"; // Base URL for your API
+            const apiEndPointUrl = "/api/iml"; // Endpoint URL
+
+            $(document).ready(function () {
+                // Trigger when the page loads
+                $("#projectID").focus();
+                checkAndCreateDatabase(); // Ensure database and table exist
+                $("#projectID").on("change", checkPrimaryKey); // Trigger primary key check on Project ID change
+            });
+
+            // Reset the form
+            function resetForm() {
+                $("#projectID").val("").prop("disabled", false);
+                $("#projectName, #assignedTo, #assignmentDate, #deadline").val("").prop("disabled", true);
+                $("#saveBtn, #updateBtn").prop("disabled", true);
+                $("#projectID").focus();
+            }
+
+            // Enable fields
+            function enableFields(fields) {
+                fields.forEach(field => $(field).prop("disabled", false));
+            }
+
+            // Check if the primary key exists in the database
+            function checkPrimaryKey() {
+                const projectID = $("#projectID").val();
+                if (!projectID) {
+                    alert("Project ID is required");
+                    resetForm();
+                    return;
+                }
+
+                // Prepare request to check if the project ID exists
+                const request = JSON.stringify({
+                    token: connToken,
+                    cmd: "GET",
+                    dbName: dbName,
+                    rel: relName,
+                    jsonStr: {Project_ID: projectID}
+                });
+
+                // Check if the primary key exists
+                $.post(dbBaseUrl + apiEndPointUrl, request, function (response) {
+                    if (response.status === 400) {
+                        // Project ID does not exist, enable fields and Save button
+                        enableFields(["#projectName", "#assignedTo", "#assignmentDate", "#deadline"]);
+                        $("#saveBtn").prop("disabled", false);
+                    } else {
+                        // Project ID exists, populate the form and enable Update button
+                        const record = JSON.parse(response.data).record;
+                        populateForm(record);
+                        $("#updateBtn").prop("disabled", false);
+                        $("#projectID").prop("disabled", true); // Disable the primary key field
+                    }
+                });
+            }
+
+            // Populate form with existing data
+            function populateForm(record) {
+                $("#projectName").val(record.Project_Name).prop("disabled", false);
+                $("#assignedTo").val(record.Assigned_To).prop("disabled", false);
+                $("#assignmentDate").val(record.Assignment_Date).prop("disabled", false);
+                $("#deadline").val(record.Deadline).prop("disabled", false);
+            }
+
+            // Save new project data
+            function saveData() {
+                const projectID = $("#projectID").val();
+                const projectName = $("#projectName").val();
+                const assignedTo = $("#assignedTo").val();
+                const assignmentDate = $("#assignmentDate").val();
+                const deadline = $("#deadline").val();
+
+                if (!projectName || !assignedTo || !assignmentDate || !deadline) {
+                    alert("All fields are required");
+                    return;
+                }
+
+                const record = {
+                    Project_ID: projectID,
+                    Project_Name: projectName,
+                    Assigned_To: assignedTo,
+                    Assignment_Date: assignmentDate,
+                    Deadline: deadline
+                };
+
+                const request = JSON.stringify({
+                    token: connToken,
+                    cmd: "PUT",
+                    dbName: dbName,
+                    rel: relName,
+                    jsonStr: record
+                });
+
+                // Make API call to save the data
+                $.post(dbBaseUrl + apiEndPointUrl, request, function (response) {
+                    alert("Record saved successfully!");
+                    resetForm();
+                });
+            }
+
+            // Update existing project data
+            function updateData() {
+                const projectID = $("#projectID").val();
+                const projectName = $("#projectName").val();
+                const assignedTo = $("#assignedTo").val();
+                const assignmentDate = $("#assignmentDate").val();
+                const deadline = $("#deadline").val();
+
+                if (!projectName || !assignedTo || !assignmentDate || !deadline) {
+                    alert("All fields are required");
+                    return;
+                }
+
+                const record = {
+                    Project_ID: projectID,
+                    Project_Name: projectName,
+                    Assigned_To: assignedTo,
+                    Assignment_Date: assignmentDate,
+                    Deadline: deadline
+                };
+
+                const request = JSON.stringify({
+                    token: connToken,
+                    cmd: "UPDATE",
+                    dbName: dbName,
+                    rel: relName,
+                    jsonStr: record
+                });
+
+                // Make API call to update the data
+                $.post(dbBaseUrl + apiEndPointUrl, request, function (response) {
+                    alert("Record updated successfully!");
+                    resetForm();
+                });
+            }
+
+            // Check and create the database and table if they do not exist
+            function checkAndCreateDatabase() {
+                const createDbRequest = JSON.stringify({
+                    token: connToken,
+                    cmd: "PUT",
+                    dbName: dbName
+                });
+
+                const createTableRequest = JSON.stringify({
+                    token: connToken,
+                    cmd: "PUT",
+                    dbName: dbName,
+                    rel: relName,
+                    jsonStr: {
+                        Project_ID: "",
+                        Project_Name: "",
+                        Assigned_To: "",
+                        Assignment_Date: "",
+                        Deadline: ""
+                    }
+                });
+
+                // Create database if it doesn't exist
+                $.post(dbBaseUrl + "/api/irl", createDbRequest, function (response) {
+                    if (response.status === 200) {
+                        console.log("Database created successfully");
+                        createTable(); // Create table after database
+                    } else {
+                        console.log("Database already exists");
+                        createTable(); // Table creation can proceed if database exists
+                    }
+                });
+
+                // Create table if it doesn't exist
+                function createTable() {
+                    $.post(dbBaseUrl + apiEndPointUrl, createTableRequest, function (response) {
+                        if (response.status === 200) {
+                            console.log("Table created successfully");
+                        } else {
+                            console.log("Table already exists or another issue occurred");
+                        }
+                    });
+                }
+            }
+        </script>
+    </body>
+</html>
